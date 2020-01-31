@@ -2,9 +2,11 @@ require_dependency "knock/application_controller"
 
 module Knock
   class AuthTokenController < ApplicationController
+    skip_before_action :verify_authenticity_token
     before_action :authenticate
 
     def create
+      response.set_header('Authorization', "Bearer #{auth_token.token}")
       render json: auth_token, status: :created
     end
 
@@ -17,11 +19,12 @@ module Knock
     end
 
     def auth_token
-      if entity.respond_to? :to_token_payload
-        AuthToken.new payload: entity.to_token_payload
-      else
-        AuthToken.new payload: { sub: entity.id }
-      end
+      @auth_token ||=
+        if entity.respond_to? :to_token_payload
+          AuthToken.new payload: entity.to_token_payload
+        else
+          AuthToken.new payload: { sub: entity.id }
+        end
     end
 
     def entity
